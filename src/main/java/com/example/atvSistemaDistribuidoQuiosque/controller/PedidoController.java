@@ -1,26 +1,45 @@
 package com.example.atvSistemaDistribuidoQuiosque.controller;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.example.atvSistemaDistribuidoQuiosque.model.Cliente;
+import com.example.atvSistemaDistribuidoQuiosque.service.PedidoService;
 import org.springframework.messaging.handler.annotation.MessageMapping;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.stereotype.Controller;
 
 @Controller
 public class PedidoController {
 
-    private static final Logger logger = LoggerFactory.getLogger(PedidoController.class);
+    @MessageMapping("/mensagem")
+    @SendTo("/topico/respostas")
+    public String processarMensagem(String mensagem) throws Exception {
+        String[] partes = mensagem.split(":", 3);
 
-    private final SimpMessagingTemplate template;
+        if (mensagem.equalsIgnoreCase("finalizar papo")) {
+            PedidoService.finalizarPapo();
+            return "Histórico salvo com sucesso!";
+        }
 
-    public PedidoController(SimpMessagingTemplate template) {
-        this.template = template;
-    }
+        if (partes.length < 2) return "Formato inválido.";
 
-    @MessageMapping("/pedido")
-    public void receberPedido(String pedido) {
-        logger.info("📦 Pedido recebido: {}", pedido);
-        template.convertAndSend("/topico/pedidos", pedido);
-        logger.info("➡️ Pedido enviado para /topico/pedidos");
+        String tipo = partes[0].trim().toLowerCase();
+        String id = partes[1].trim();
+        String conteudo = partes.length == 3 ? partes[2].trim() : "";
+
+        switch (tipo) {
+    case "cliente":
+        PedidoService.registrarCliente(id, conteudo);
+        return "Cliente cadastrado: " + conteudo + " (ID: " + id + ")";
+    case "pedido":
+        PedidoService.registrarPedido(id, conteudo);
+        Cliente cliente = PedidoService.getCliente(id);
+        if (cliente != null) {
+            return "Pedido de " + cliente.getNome() + ": " + conteudo;
+        } else {
+            return "Cliente não encontrado.";
+        }
+    default:
+        return "Comando desconhecido.";
+}
+
     }
 }
