@@ -26,6 +26,12 @@ public class PedidoController {
         String conteudo = partes.length == 3 ? partes[2].trim() : "";
 
         switch (tipo) {
+
+             case "novo_cliente":
+        String novoId = PedidoService.gerarIdAleatorio();
+        PedidoService.registrarCliente(novoId, id);
+        return "Cliente cadastrado: " + id + " (ID: " + novoId + ")";
+        
     case "cliente":
         PedidoService.registrarCliente(id, conteudo);
         return "Cliente cadastrado: " + conteudo + " (ID: " + id + ")";

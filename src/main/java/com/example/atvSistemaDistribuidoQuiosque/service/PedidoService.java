@@ -16,9 +16,8 @@ public class PedidoService {
     }
 
     public static Cliente getCliente(String id) {
-    return clientes.get(id);
-}
-
+        return clientes.get(id);
+    }
 
     public static void registrarPedido(String id, String descricao) {
         Cliente cliente = clientes.get(id);
@@ -34,5 +33,13 @@ public class PedidoService {
         }
         writer.close();
         historico.clear();
+    }
+
+    public static String gerarIdAleatorio() {
+        String id;
+        do {
+            id = String.format("%03d", new Random().nextInt(1000)); // ex: "042"
+        } while (clientes.containsKey(id));
+        return id;
     }
 }

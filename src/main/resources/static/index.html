@@ -23,7 +23,7 @@
       text-align: center;
       margin-bottom: 20px;
     }
-    input, button {
+    input, button, select {
       width: 100%;
       padding: 10px;
       margin: 5px 0;
@@ -57,14 +57,21 @@
 <div class="container">
   <h1>Quiosque - Pedidos por Cliente</h1>
 
-  <input id="mensagem" placeholder="Ex: cliente:001:Junior ou pedido:001:Quero um suco">
-  <button onclick="enviar()">Enviar</button>
+  <input id="nomeCliente" placeholder="Digite o nome do cliente">
+  <button onclick="cadastrarCliente()">Cadastrar Cliente</button>
+
+  <hr>
+
+  <select id="clienteSelecionado">
+    <option value="">-- Selecione um cliente --</option>
+  </select>
+  <input id="descricaoPedido" placeholder="Descrição do pedido">
+  <button onclick="fazerPedido()">Fazer Pedido</button>
 
   <div class="info">
-    <p><strong>Comandos:</strong></p>
-    <p>📌 <code>cliente:ID:Nome</code> → cadastrar cliente</p>
-    <p>📌 <code>pedido:ID:Descrição</code> → adicionar pedido</p>
-    <p>📌 <code>finalizar papo</code> → salvar histórico</p>
+    <p><strong>Infomações dos Clientes/Pedidos abaixo:</strong></p>
+    <p>Sistema de coleta de Pedidos no Chat autonomo do Quiosque!!!</p>
+    
   </div>
 
   <div id="clientesContainer"></div>
@@ -82,46 +89,59 @@
     });
   });
 
-  function enviar() {
-    const msg = document.getElementById('mensagem').value.trim();
-    if (msg) {
-      stompClient.send("/app/mensagem", {}, msg);
-      document.getElementById('mensagem').value = '';
+  function cadastrarCliente() {
+    const nome = document.getElementById('nomeCliente').value.trim();
+    if (nome) {
+      stompClient.send("/app/mensagem", {}, "novo_cliente:" + nome);
+      document.getElementById('nomeCliente').value = '';
+    }
+  }
+
+  function fazerPedido() {
+    const clienteId = document.getElementById('clienteSelecionado').value;
+    const descricao = document.getElementById('descricaoPedido').value.trim();
+    if (clienteId && descricao) {
+      stompClient.send("/app/mensagem", {}, "pedido:" + clienteId + ":" + descricao);
+      document.getElementById('descricaoPedido').value = '';
+    } else {
+      alert("Selecione um cliente e escreva o pedido.");
     }
   }
 
   function tratarMensagem(msg) {
-  console.log("Recebido:", msg); // Debug no console
+    console.log("Recebido:", msg);
 
-  if (msg.includes("Cliente cadastrado:")) {
-    const match = msg.match(/Cliente cadastrado: (.+) \(ID: (\d+)\)/);
-    if (match) {
-      const nome = match[1];
-      const id = match[2];
-      if (!clientes[id]) {
-        clientes[id] = { nome: nome, pedidos: [] };
-        renderClientes();
+    if (msg.includes("Cliente cadastrado:")) {
+      const match = msg.match(/Cliente cadastrado: (.+) \(ID: (\d+)\)/);
+      if (match) {
+        const nome = match[1];
+        const id = match[2];
+        if (!clientes[id]) {
+          clientes[id] = { nome: nome, pedidos: [] };
+          const option = document.createElement("option");
+          option.value = id;
+          option.text = nome + " (ID: " + id + ")";
+          document.getElementById("clienteSelecionado").appendChild(option);
+          renderClientes();
+        }
       }
-    }
-  } else if (msg.includes("Pedido de")) {
-    const match = msg.match(/Pedido de (.+): (.+)/);
-    if (match) {
-      const nome = match[1].trim();
-      const pedido = match[2].trim();
-
-      const id = Object.keys(clientes).find(cid => clientes[cid].nome === nome);
-      if (id) {
-        clientes[id].pedidos.push(pedido);
-        renderClientes();
+    } else if (msg.includes("Pedido de")) {
+      const match = msg.match(/Pedido de (.+): (.+)/);
+      if (match) {
+        const nome = match[1].trim();
+        const pedido = match[2].trim();
+        const id = Object.keys(clientes).find(cid => clientes[cid].nome === nome);
+        if (id) {
+          clientes[id].pedidos.push(pedido);
+          renderClientes();
+        }
       }
+    } else if (msg.includes("Histórico salvo")) {
+      alert("Histórico foi salvo com sucesso.");
+    } else {
+      alert("Resposta do servidor: " + msg);
     }
-  } else if (msg.includes("Histórico salvo")) {
-    alert("Histórico foi salvo com sucesso.");
-  } else {
-    alert("Resposta do servidor: " + msg);
   }
-}
-
 
   function renderClientes() {
     const container = document.getElementById('clientesContainer');
